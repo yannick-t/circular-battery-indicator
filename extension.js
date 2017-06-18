@@ -13,9 +13,9 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
 
     _origIndicator: null,
     _indicator: null,
-    _repaintHandler: null,
+    _repaintId: null,
 
-    _powerHandler: null,
+    _powerProxyId: null,
 
     get _power() {
         return Main.panel.statusArea.aggregateMenu._power;
@@ -25,7 +25,7 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
         this._indicator = new St.DrawingArea({ y_align: Clutter.ActorAlign.CENTER });
 
         this._indicator.set_width(1.6 * Panel.PANEL_ICON_SIZE);
-        this._indicator.set_height(Panel.PANEL_ICON_SIZE);
+        this._indicator.set_height(1.1 * Panel.PANEL_ICON_SIZE);
 
         this._origIndicator = this._power._indicator;
     },
@@ -35,30 +35,30 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
         let power = this._power;
 
         // gfx
-        power.indicators.remove_actor(this._origIndicator);
-        this._power.indicators.add_actor(this._indicator);
-        this._repaint_handler = this._indicator.connect("repaint", Lang.bind(this, this._paintIndicator));
+        power.indicators.replace_child(this._origIndicator, this._indicator);
+        this._repaintId = this._indicator.connect("repaint", Lang.bind(this, this._paintIndicator));
 
         // events
         let _onPowerChanged = function() {
             if (this._proxy.IsPresent) {
                 that._percentage = this._proxy.Percentage;
-                that._charging = this._proxy.State == UPower.DeviceState.CHARGING || this._proxy.State == UPower.DeviceState.FULLY_CHARGED;
+                that._charging = this._proxy.State == UPower.DeviceState.CHARGING 
+                                || this._proxy.State == UPower.DeviceState.FULLY_CHARGED;
             } else {
                 that._percentage = null;
             }
             that.updateDisplay.call(that);
         }
 
-        this._powerHandler = power._proxy.connect('g-properties-changed', Lang.bind(power, _onPowerChanged));
+        this._powerProxyId = power._proxy.connect('g-properties-changed', Lang.bind(power, _onPowerChanged));
         _onPowerChanged.call(power);
     },
 
     disable() {
-        if (this._repaint_handler) this._indicator.disconnect(this._repaint_handler);
-        this._power.indicators.remove_actor(this._indicator);
-        this._power.indicators.add_actor(this._origIndicator);
-        this._power._proxy.disconnect(this._powerHandler);
+        this._power.indicators.replace_child(this._indicator, this._origIndicator);
+
+        this._indicator.disconnect(this._repaintId);
+        this._power._proxy.disconnect(this._powerProxyId);
     },
 
     updateDisplay() {
@@ -78,10 +78,10 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
         let areaHeight = area.get_height();
 
         let outer = Math.min(areaHeight, areaWidth ) / 2;
-        let width = outer * 0.275;
+        let width = outer * 0.285;
         let inner = outer - (width / 2);
 
-        Clutter.cairo_set_source_color(ctx, color.darken());
+        Clutter.cairo_set_source_color(ctx, color.darken().darken());
         ctx.save();
         ctx.translate(areaWidth / 2.0, areaHeight / 2.0);
         ctx.rotate(3 / 2 * Math.PI);
@@ -96,7 +96,7 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
         ctx.stroke();
 
         if (this._charging) {
-            ctx.arc(0, 0, inner - width * 1.4, 0, (this._percentage / 100) * 2 * Math.PI);
+            ctx.arc(0, 0, inner - width * 1.4, 0, 2 * Math.PI);
             ctx.fill();
             // TODO: Animation?
         }
