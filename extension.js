@@ -1,3 +1,19 @@
+/*  Copyright (C) 2017 Yannick Tanner
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
 const Lang = imports.lang;
 const Clutter = imports.gi.Clutter;
 const St = imports.gi.St;
@@ -22,15 +38,15 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
     },
 
     _init() {
+        this._origIndicator = this._power._indicator;
+    },
+
+    enable() {
         this._indicator = new St.DrawingArea({ y_align: Clutter.ActorAlign.CENTER });
 
         this._indicator.set_width(1.6 * Panel.PANEL_ICON_SIZE);
         this._indicator.set_height(1.1 * Panel.PANEL_ICON_SIZE);
 
-        this._origIndicator = this._power._indicator;
-    },
-
-    enable() {
         let that = this;
         let power = this._power;
 
@@ -59,6 +75,7 @@ const CircularBatteryIndicatorHandler = new Lang.Class({
 
         this._indicator.disconnect(this._repaintId);
         this._power._proxy.disconnect(this._powerProxyId);
+        this._indicator.destroy();
     },
 
     updateDisplay() {
